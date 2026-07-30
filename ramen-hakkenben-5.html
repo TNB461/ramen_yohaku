@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ラーメン発見弁</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin:0; padding:0; height:100%; overflow:hidden;
+    font-family: 'Zen Maru Gothic', 'Hiragino Sans', sans-serif;
+    background: #fff6ea;
+    -webkit-user-select:none; user-select:none;
+  }
+  #app { position:relative; width:100vw; height:100vh; overflow:hidden; }
+
+  /* ---------- 共通 ---------- */
+  button { font-family: inherit; }
+  .primaryBtn {
+    background:#e2472a; color:#fff; border:none; border-radius:16px;
+    font-size:18px; font-weight:900; padding:16px 20px;
+    cursor:pointer; box-shadow:0 6px 14px rgba(226,71,42,0.4);
+    width:100%;
+  }
+  .secondaryBtn {
+    background:#fff; color:#e2472a; border:2px solid #e2472a; border-radius:14px;
+    font-size:15px; font-weight:700; padding:10px 16px; cursor:pointer;
+  }
+
+  /* ---------- スタート画面 ---------- */
+  #startScreen {
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; padding:32px;
+    background: radial-gradient(circle at 50% 20%, #ffe3b0 0%, #ffb15e 55%, #ff8a3d 100%);
+    text-align:center; z-index:30;
+  }
+  #startScreen .icon { font-size:64px; margin-bottom:6px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2)); }
+  #startScreen h1 {
+    font-family:'Dela Gothic One', sans-serif;
+    font-size:34px; color:#fff; margin:0 0 6px;
+    text-shadow: 3px 3px 0 #c23b1f, 0 8px 16px rgba(0,0,0,0.25);
+    letter-spacing:1px;
+  }
+  #startScreen .sub { color:#fff; font-weight:700; opacity:0.95; margin:0 0 22px; font-size:14px; }
+  #startScreen p.desc {
+    color:#5b3a1e; background:rgba(255,255,255,0.85); border-radius:16px;
+    padding:16px 18px; font-size:14px; line-height:1.8; margin:0 0 26px;
+    max-width:340px;
+  }
+  #radiusRow {
+    display:flex; align-items:center; gap:10px; margin-bottom:22px;
+    background:rgba(255,255,255,0.85); padding:10px 16px; border-radius:14px;
+  }
+  #radiusRow label { font-size:13px; font-weight:700; color:#5b3a1e; }
+  #radiusRow input { width:110px; }
+  #radiusVal { font-weight:900; color:#e2472a; min-width:52px; text-align:right; }
+  #startBtnWrap { width:100%; max-width:300px; }
+  #statusMsg { color:#fff; font-size:12px; margin-top:14px; min-height:16px; font-weight:700; }
+
+  /* ---------- メイン画面 ---------- */
+  #mainScreen { position:absolute; inset:0; display:none; flex-direction:column; z-index:1; }
+  #mainScreen.show { display:flex; }
+  #topBar {
+    background:#e2472a; color:#fff; padding:16px 18px 14px;
+    display:flex; align-items:center; justify-content:space-between;
+    box-shadow:0 3px 8px rgba(0,0,0,0.15); z-index:2;
+  }
+  #topBar .title { font-family:'Dela Gothic One',sans-serif; font-size:18px; letter-spacing:1px; }
+  #topBar .count { font-size:12px; font-weight:700; opacity:0.95; }
+
+  #radar {
+    padding:14px 18px 4px; font-size:12px; color:#a15c2c; font-weight:700;
+    display:flex; align-items:center; gap:8px;
+  }
+  .pulseDot {
+    width:9px; height:9px; border-radius:50%; background:#2ecc71;
+    box-shadow: 0 0 0 rgba(46,204,113,0.5);
+    animation: pulse 1.6s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(46,204,113,0.55); }
+    70% { box-shadow: 0 0 0 10px rgba(46,204,113,0); }
+    100% { box-shadow: 0 0 0 0 rgba(46,204,113,0); }
+  }
+
+  #shopList { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; touch-action: pan-y; padding:10px 14px 90px; }
+  .shopCard {
+    background:#fff; border-radius:16px; padding:14px 16px; margin-bottom:12px;
+    box-shadow:0 3px 10px rgba(0,0,0,0.07); display:flex; align-items:center;
+    gap:12px; cursor:pointer; border:2px solid transparent;
+  }
+  .shopCard.discovered { border-color:#ffcf8a; }
+  .shopCard .bowl { font-size:28px; flex-shrink:0; }
+  .shopCard .info { flex:1; min-width:0; }
+  .shopCard .name { font-weight:900; font-size:15px; color:#3d2814; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .shopCard .meta { font-size:12px; color:#a08066; margin-top:3px; }
+  .shopCard .dist { font-size:12px; font-weight:800; color:#e2472a; flex-shrink:0; text-align:right; }
+  .shopCard .dist small { display:block; font-weight:600; color:#c99; font-size:10px; }
+  .shopCard.locked { opacity:0.55; }
+  .shopCard .stars { color:#f5a623; font-size:11px; margin-top:2px; }
+
+  #emptyMsg { text-align:center; color:#b89178; font-size:13px; margin-top:40px; padding:0 20px; line-height:1.8; }
+
+  #bottomBar {
+    position:absolute; bottom:0; left:0; right:0; padding:12px 16px calc(44px + env(safe-area-inset-bottom));
+    background:linear-gradient(to top, #fff6ea 60%, rgba(255,246,234,0)); z-index:3;
+  }
+
+  /* ---------- 通知トースト ---------- */
+  #toastArea {
+    position:absolute; top:14px; left:0; right:0; z-index:50;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    pointer-events:none;
+  }
+  .toast {
+    pointer-events:auto;
+    width:min(88vw, 360px); background:#2b2b2b; color:#fff; border-radius:16px;
+    padding:12px 14px; display:flex; align-items:center; gap:12px;
+    box-shadow:0 8px 22px rgba(0,0,0,0.35);
+    animation: slideDown 0.35s ease;
+    cursor:pointer;
+  }
+  @keyframes slideDown {
+    from { transform:translateY(-40px); opacity:0; }
+    to { transform:translateY(0); opacity:1; }
+  }
+  .toast .bowl { font-size:26px; }
+  .toast .txt { flex:1; }
+  .toast .txt .t1 { font-size:11px; color:#ffcf8a; font-weight:700; }
+  .toast .txt .t2 { font-size:14px; font-weight:900; }
+  .toast .txt .t3 { font-size:11px; color:#ccc; margin-top:2px; }
+
+  /* ---------- 詳細モーダル ---------- */
+  #detailModal {
+    position:absolute; inset:0; display:none; align-items:flex-end; justify-content:center;
+    background:rgba(0,0,0,0.45); z-index:60;
+  }
+  #detailModal.show { display:flex; }
+  #detailCard {
+    width:100%; max-width:480px; background:#fff; border-radius:26px 26px 0 0;
+    padding:26px 24px calc(90px + env(safe-area-inset-bottom));
+    max-height:85vh; max-height:85dvh;
+    overflow-y:auto; -webkit-overflow-scrolling:touch;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from{ transform:translateY(30px); opacity:0;} to{transform:translateY(0); opacity:1;} }
+  #detailCard .closeRow { display:flex; justify-content:flex-end; margin-bottom:4px; }
+  #detailCard .closeBtn { background:#f1eee9; border:none; border-radius:50%; width:32px; height:32px; font-size:16px; color:#888; cursor:pointer; }
+  #detailCard .bowlBig { font-size:52px; text-align:center; margin-bottom:6px; }
+  #detailCard h2 { text-align:center; font-size:21px; margin:0 0 4px; color:#2c1c10; }
+  #detailCard .addr { text-align:center; font-size:12px; color:#a08066; margin-bottom:10px; }
+  #detailCard .starsBig { text-align:center; color:#f5a623; font-size:20px; margin-bottom:4px; }
+  #detailCard .ratingNum { text-align:center; font-size:12px; color:#c99; margin-bottom:14px; }
+  #detailCard .tags { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:18px; }
+  #detailCard .tag { background:#fff1de; color:#c2611a; font-size:12px; font-weight:800; padding:6px 12px; border-radius:20px; }
+  #detailCard .monoBox {
+    background:#fbf6ef; border-radius:16px; padding:16px; font-size:13.5px;
+    line-height:1.9; color:#4a3420; margin-bottom:18px; min-height:60px;
+  }
+  #speakBtn { display:flex; align-items:center; justify-content:center; gap:8px; }
+  #speakBtn.speaking { background:#a83421; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- スタート画面 -->
+  <div id="startScreen">
+    <div class="icon">🍜</div>
+    <h1>ラーメン発見弁</h1>
+    <div class="sub">歩くだけで、今日の一杯が見つかる</div>
+    <p class="desc">
+      アプリを開いたまま街を歩くと、近くのラーメン屋に近づいた時に通知でお知らせ。
+      通知をタップすると、そのお店の特徴と評価を合成音声が熱く語ってくれます。
+    </p>
+    <div id="radiusRow">
+      <label>探索範囲</label>
+      <input id="radiusSlider" type="range" min="300" max="1000" step="100" value="300">
+      <span id="radiusVal">300m</span>
+    </div>
+    <div id="startBtnWrap">
+      <button class="primaryBtn" id="startBtn">現在地を許可して探索開始</button>
+    </div>
+    <div id="statusMsg"></div>
+  </div>
+
+  <!-- メイン画面 -->
+  <div id="mainScreen">
+    <div id="topBar">
+      <button id="backToStartBtn" style="background:rgba(255,255,255,0.25); border:none; color:#fff; font-size:18px; border-radius:10px; width:34px; height:34px; margin-right:6px;">←</button>
+      <div class="title" style="flex:1;">🍜 ラーメン発見弁</div>
+      <div class="count" id="countLabel">発見 0 / 検索中…</div>
+    </div>
+    <div id="radar"><span class="pulseDot"></span><span id="radarText">現在地から探索中…</span></div>
+    <div id="coordsDebug" style="padding:0 18px 8px; font-size:11px; color:#c99; font-weight:700;"></div>
+    <div id="shopList"></div>
+    <div id="bottomBar">
+      <button class="secondaryBtn" id="testNotifyBtn" style="width:100%;">🔔 テスト通知を出す(近くのお店で確認)</button>
+    </div>
+  </div>
+
+  <!-- 通知トースト -->
+  <div id="toastArea"></div>
+
+  <!-- 詳細モーダル -->
+  <div id="detailModal">
+    <div id="detailCard">
+      <div class="closeRow"><button class="closeBtn" id="closeDetailBtn">✕</button></div>
+      <div class="bowlBig">🍜</div>
+      <h2 id="dName">-</h2>
+      <div class="addr" id="dAddr">-</div>
+      <div class="starsBig" id="dStars">-</div>
+      <div class="ratingNum" id="dRatingNum">-</div>
+      <div class="tags" id="dTags"></div>
+      <div class="monoBox" id="dMono">…</div>
+      <button class="primaryBtn" id="speakBtn">🔊 熱弁を再生</button>
+      <button class="secondaryBtn" id="navigateBtn" style="width:100%; margin-top:10px; padding:14px 16px; font-size:16px;">🧭 ルート案内を開始</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ===================== ユーティリティ ===================== */
+function hashString(str) {
+  let h = 0;
+  for (let i=0;i<str.length;i++) { h = (h*31 + str.charCodeAt(i)) >>> 0; }
+  return h;
+}
+function seededRand(seed) {
+  // 0-1 の疑似乱数(シード固定)
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2-lat1), dLon = toRad(lon2-lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+/* ===================== 店データ生成(店名からシード固定) ===================== */
+const TAG_POOL = [
+  "こってり濃厚豚骨", "あっさり醤油系", "行列必至の名店", "深夜営業でうれしい",
+  "替え玉無料", "自家製麺こだわり", "昔ながらの中華そば", "地元で愛される一軒",
+  "スープ完飲必至", "背脂たっぷり", "限定メニューあり", "家族経営の隠れ家"
+];
+function generateProfile(shop) {
+  const seed = hashString(shop.name);
+  const r1 = seededRand(seed);
+  const r2 = seededRand(seed*1.7+1);
+  const rating = Math.round((3.4 + r1*1.5) * 10) / 10; // 3.4〜4.9
+  const tagCount = 2 + Math.floor(r2*2); // 2〜3個
+  const shuffled = TAG_POOL.slice().sort((a,b)=> seededRand(hashString(a+shop.name)) - seededRand(hashString(b+shop.name)));
+  const tags = shuffled.slice(0, tagCount);
+  return { rating, tags };
+}
+function starString(rating) {
+  const full = Math.round(rating);
+  return "★".repeat(full) + "☆".repeat(5-full);
+}
+function buildMonologue(shop, profile) {
+  const openers = ["聞いてくれ、これは事件だ。", "はっきり言おう。", "今日ここに来て正解だった。", "覚悟して聞いてほしい。"];
+  const closers = ["これは絶対、外せない一杯だ。", "近くを通ったなら、寄らない理由がない。", "今日のランチ、もう決まりだろう。", "この評価は伊達じゃない。"];
+  const seed = hashString(shop.name);
+  const opener = openers[Math.floor(seededRand(seed)*openers.length)];
+  const closer = closers[Math.floor(seededRand(seed*3)*closers.length)];
+  const tagText = profile.tags.join("、そして");
+  return `${opener}「${shop.name}」、この店は${tagText}という評判で、評価は星${profile.rating}。一口すすればわかる、丁寧に作られたスープと麺のバランス。${closer}`;
+}
+
+/* ===================== 状態管理 ===================== */
+let RADIUS = 300;
+let currentPos = null;
+let shops = []; // {id, name, lat, lon, addr}
+let discoveredIds = new Set();
+let watchId = null;
+let lastFetchPos = null;
+
+const el = id => document.getElementById(id);
+
+function updateCoordsDebug() {
+  if (!currentPos) return;
+  el('coordsDebug').textContent =
+    `📍 現在地(取得値): ${currentPos.lat.toFixed(6)}, ${currentPos.lon.toFixed(6)}`;
+}
+
+el('radiusSlider').addEventListener('input', (e) => {
+  RADIUS = parseInt(e.target.value, 10);
+  el('radiusVal').textContent = RADIUS + 'm';
+});
+
+/* ===================== Overpass APIから実在のラーメン屋を検索 ===================== */
+async function fetchNearbyRamen(lat, lon, radius) {
+  const query = `
+    [out:json][timeout:25];
+    (
+      node["amenity"~"^(restaurant|fast_food)$"]["cuisine"~"ramen|noodle",i](around:${radius},${lat},${lon});
+      way["amenity"~"^(restaurant|fast_food)$"]["cuisine"~"ramen|noodle",i](around:${radius},${lat},${lon});
+      node["name"~"ラーメン|らーめん|ラー麺|中華そば|ramen",i](around:${radius},${lat},${lon});
+      way["name"~"ラーメン|らーめん|ラー麺|中華そば|ramen",i](around:${radius},${lat},${lon});
+    );
+    out center 100;
+  `;
+  const res = await fetch('https://overpass-api.de/api/interpreter', {
+    method: 'POST',
+    body: 'data=' + encodeURIComponent(query)
+  });
+  if (!res.ok) throw new Error(`overpass error (status ${res.status})`);
+  const data = await res.json();
+  const seen = new Set();
+  const results = [];
+  for (const el of data.elements) {
+    const name = (el.tags && el.tags.name) ? el.tags.name : null;
+    if (!name) continue;
+    const lat2 = el.lat !== undefined ? el.lat : (el.center ? el.center.lat : null);
+    const lon2 = el.lon !== undefined ? el.lon : (el.center ? el.center.lon : null);
+    if (lat2 === null || lon2 === null) continue;
+    const key = name + '_' + lat2.toFixed(4) + '_' + lon2.toFixed(4);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const addrParts = [];
+    if (el.tags['addr:city']) addrParts.push(el.tags['addr:city']);
+    if (el.tags['addr:street']) addrParts.push(el.tags['addr:street']);
+    results.push({
+      id: key,
+      name,
+      lat: lat2,
+      lon: lon2,
+      addr: addrParts.join(' ') || '住所情報なし'
+    });
+  }
+  return results;
+}
+
+/* ===================== メイン画面の描画 ===================== */
+function renderList() {
+  if (!currentPos) return;
+  const withDist = shops.map(s => ({
+    ...s,
+    dist: haversine(currentPos.lat, currentPos.lon, s.lat, s.lon)
+  })).sort((a,b) => a.dist - b.dist);
+
+  const listEl = el('shopList');
+  if (withDist.length === 0) {
+    listEl.innerHTML = '';
+    el('emptyMsg') || listEl.insertAdjacentHTML('beforeend',
+      '<div id="emptyMsg">この範囲にはラーメン屋が見つかりませんでした。<br>探索範囲を広げてもう一度試してみてください。</div>');
+    el('countLabel').textContent = '発見 0 / 0件';
+    return;
+  }
+
+  el('countLabel').textContent = `発見 ${discoveredIds.size} / ${withDist.length}件`;
+
+  listEl.innerHTML = withDist.map(s => {
+    const discovered = discoveredIds.has(s.id);
+    const profile = generateProfile(s);
+    const distTxt = s.dist < 1000 ? Math.round(s.dist) + 'm' : (s.dist/1000).toFixed(1) + 'km';
+    return `
+      <div class="shopCard ${discovered ? 'discovered' : 'locked'}" data-id="${s.id}">
+        <div class="bowl">${discovered ? '🍜' : '❔'}</div>
+        <div class="info">
+          <div class="name">${discovered ? s.name : '未発見のラーメン屋'}</div>
+          <div class="meta">${discovered ? s.addr : '近づくと詳細が判明します'}</div>
+          ${discovered ? `<div class="stars">${starString(profile.rating)} ${profile.rating}</div>` : ''}
+        </div>
+        <div class="dist">${distTxt}<small>現在距離</small></div>
+      </div>
+    `;
+  }).join('');
+
+  listEl.querySelectorAll('.shopCard.discovered').forEach(card => {
+    card.addEventListener('click', () => openDetail(card.dataset.id));
+  });
+}
+
+/* ===================== 通知(発見)処理 ===================== */
+function checkDiscovery() {
+  if (!currentPos) return;
+  const NOTIFY_RADIUS = 180; // メートル
+  for (const s of shops) {
+    if (discoveredIds.has(s.id)) continue;
+    const d = haversine(currentPos.lat, currentPos.lon, s.lat, s.lon);
+    if (d <= NOTIFY_RADIUS) {
+      discoveredIds.add(s.id);
+      showToast(s);
+    }
+  }
+  renderList();
+}
+
+function showToast(shop) {
+  const profile = generateProfile(shop);
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = `
+    <div class="bowl">🍜</div>
+    <div class="txt">
+      <div class="t1">近くにラーメン屋を発見!</div>
+      <div class="t2">${shop.name}</div>
+      <div class="t3">${starString(profile.rating)} ${profile.rating} ・ タップで詳細</div>
+    </div>
+  `;
+  toast.addEventListener('click', () => {
+    toast.remove();
+    openDetail(shop.id);
+  });
+  el('toastArea').appendChild(toast);
+  setTimeout(() => { if (toast.parentNode) toast.remove(); }, 6000);
+}
+
+/* ===================== 詳細モーダル ===================== */
+let currentDetailShop = null;
+function openDetail(id) {
+  const shop = shops.find(s => s.id === id);
+  if (!shop) return;
+  currentDetailShop = shop;
+  const profile = generateProfile(shop);
+  el('dName').textContent = shop.name;
+  el('dAddr').textContent = shop.addr;
+  el('dStars').textContent = starString(profile.rating);
+  el('dRatingNum').textContent = `評価 ${profile.rating} / 5.0`;
+  el('dTags').innerHTML = profile.tags.map(t => `<span class="tag">${t}</span>`).join('');
+  el('dMono').textContent = buildMonologue(shop, profile);
+  el('detailModal').classList.add('show');
+  startSpeaking(el('dMono').textContent);
+}
+el('closeDetailBtn').addEventListener('click', () => {
+  el('detailModal').classList.remove('show');
+  stopSpeaking();
+});
+
+el('navigateBtn').addEventListener('click', () => {
+  if (!currentDetailShop) return;
+  const { lat, lon } = currentDetailShop;
+  const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}&travelmode=walking`;
+  window.open(url, '_blank');
+});
+
+/* ===================== 合成音声 ===================== */
+function stopSpeaking() {
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  el('speakBtn').classList.remove('speaking');
+  el('speakBtn').textContent = '🔊 熱弁を再生';
+}
+function startSpeaking(text) {
+  if (!('speechSynthesis' in window)) {
+    alert('このブラウザは音声読み上げに対応していません。');
+    return;
+  }
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'ja-JP';
+  utter.rate = 1.05;
+  utter.pitch = 1.1;
+  const voices = window.speechSynthesis.getVoices();
+  const jaVoice = voices.find(v => v.lang && v.lang.startsWith('ja'));
+  if (jaVoice) utter.voice = jaVoice;
+  utter.onend = () => {
+    el('speakBtn').classList.remove('speaking');
+    el('speakBtn').textContent = '🔊 熱弁を再生';
+  };
+  utter.onerror = utter.onend;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utter);
+  el('speakBtn').classList.add('speaking');
+  el('speakBtn').textContent = '⏹ 熱弁を停止';
+}
+el('speakBtn').addEventListener('click', () => {
+  const btn = el('speakBtn');
+  if (btn.classList.contains('speaking')) {
+    stopSpeaking();
+  } else if (currentDetailShop) {
+    startSpeaking(el('dMono').textContent);
+  }
+});
+
+/* ===================== 位置情報 ===================== */
+function startWatch() {
+  if (!('geolocation' in navigator)) {
+    el('statusMsg').textContent = 'このブラウザ/画面はgeolocation APIに対応していません(iframe等で権限がブロックされている可能性があります)。';
+    return;
+  }
+  if (window.isSecureContext === false) {
+    el('statusMsg').textContent = 'セキュアな接続(https)でないため位置情報が使えません。';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    currentPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+    updateCoordsDebug();
+    el('startScreen').style.display = 'none';
+    el('mainScreen').classList.add('show');
+    await loadShops();
+    watchId = navigator.geolocation.watchPosition((p) => {
+      currentPos = { lat: p.coords.latitude, lon: p.coords.longitude };
+      updateCoordsDebug();
+      checkDiscovery();
+      maybeRefetch();
+    }, (err) => {
+      console.warn('watch error', err);
+    }, { enableHighAccuracy:true, maximumAge:5000, timeout:15000 });
+  }, (err) => {
+    let reason = '';
+    switch (err.code) {
+      case 1: reason = '権限が拒否されました(PERMISSION_DENIED)'; break;
+      case 2: reason = '位置情報を取得できません(POSITION_UNAVAILABLE)'; break;
+      case 3: reason = 'タイムアウトしました(TIMEOUT)'; break;
+      default: reason = '不明なエラー';
+    }
+    el('statusMsg').textContent = `位置情報の取得に失敗: ${reason} [code:${err.code}] ${err.message || ''}`;
+  }, { enableHighAccuracy:true, timeout:15000 });
+}
+
+async function loadShops() {
+  el('radarText').textContent = '周辺のラーメン屋を検索中…';
+  try {
+    shops = await fetchNearbyRamen(currentPos.lat, currentPos.lon, RADIUS);
+    lastFetchPos = { ...currentPos };
+    el('radarText').textContent = `半径${RADIUS}m以内を探索中(${shops.length}件見つかりました)`;
+    checkDiscovery();
+    renderList();
+  } catch (e) {
+    console.error('fetchNearbyRamen error:', e);
+    el('radarText').textContent = `検索に失敗しました: ${e.message || e}`;
+  }
+}
+
+function maybeRefetch() {
+  if (!lastFetchPos) return;
+  const moved = haversine(lastFetchPos.lat, lastFetchPos.lon, currentPos.lat, currentPos.lon);
+  if (moved > RADIUS * 0.6) {
+    loadShops();
+  }
+}
+
+el('startBtn').addEventListener('click', () => {
+  el('statusMsg').textContent = '現在地を取得しています…';
+  startWatch();
+});
+
+/* 最初の画面に戻ってやり直せるように */
+el('backToStartBtn').addEventListener('click', () => {
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  el('detailModal').classList.remove('show');
+  el('mainScreen').classList.remove('show');
+  el('toastArea').innerHTML = '';
+  el('statusMsg').textContent = '';
+  el('startScreen').style.display = 'flex';
+});
+
+/* テスト通知(実際に歩かなくても動作確認できるように) */
+el('testNotifyBtn').addEventListener('click', () => {
+  if (shops.length === 0) {
+    alert('周辺のお店データがまだありません。');
+    return;
+  }
+  const undiscovered = shops.filter(s => !discoveredIds.has(s.id));
+  const target = undiscovered.length > 0 ? undiscovered[0] : shops[0];
+  discoveredIds.add(target.id);
+  showToast(target);
+  renderList();
+});
+
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.onvoiceschanged = () => {};
+}
+</script>
+</body>
+</html>
